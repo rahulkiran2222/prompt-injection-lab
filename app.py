@@ -8,70 +8,73 @@ from core.metrics import PILMetrics
 
 st.set_page_config(page_title="Prompt Injection Lab", layout="wide")
 
-# Custom CSS for a professional research look
-st.markdown("""
-    <style>
-    .main { background-color: #f5f7f9; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    </style>
-    """, unsafe_allow_html=True) # <--- Changed to unsafe_allow_html
-
 st.title("🛡️ Prompt Injection Lab (PIL)")
-st.caption("A scientific framework for measuring LLM vulnerability and defense effectiveness.")
+st.caption("Testing Resilience across SOTA Models: Llama 3.1, Claude 3.5, Gemini 1.5, and more.")
 
-# Sidebar
-st.sidebar.header("🔬 Experiment Configuration")
-model_choice = st.sidebar.selectbox("Target Model", ["gpt-3.5-turbo", "gpt-4o-mini", "huggingface/meta-llama/Meta-Llama-3-8B-Instruct"])
-api_key = st.sidebar.text_input("API Key", type="password", help="Enter your OpenAI or HuggingFace API key.")
+# Sidebar - Improved for multiple providers
+st.sidebar.header("🔬 Model Configuration")
+
+model_dict = {
+    "Llama 3.1 70B (HF)": "huggingface/meta-llama/Meta-Llama-3.1-70B-Instruct",
+    "Claude 3.5 Sonnet": "anthropic/claude-3-5-sonnet-20240620",
+    "Gemini 1.5 Flash": "gemini/gemini-1.5-flash",
+    "DeepSeek V2.5": "deepseek/deepseek-chat",
+    "Qwen 2.5 72B": "huggingface/Qwen/Qwen2.5-72B-Instruct",
+    "Gemma 2 27B": "huggingface/google/gemma-2-27b-it",
+    "Mistral Large 2": "mistral/mistral-large-latest",
+    "GPT-4o Mini": "openai/gpt-4o-mini",
+    "Perplexity Llama 3": "perplexity/llama-3-sonar-large-32k-online",
+    "Phi-3.5 MoE": "huggingface/microsoft/Phi-3.5-MoE-instruct"
+}
+
+selected_display_name = st.sidebar.selectbox("Target Model", list(model_dict.keys()))
+model_id = model_dict[selected_display_name]
+
+# Context-aware API Key field
+key_help = "Enter the API key for the selected provider (HF Token, Google API Key, etc.)"
+api_key = st.sidebar.text_input("API Provider Key", type="password", help=key_help)
+
 defense_choice = st.sidebar.selectbox("Defense Strategy", ["No Defense", "XML Tagging", "Delimiter Guard"])
+
+st.sidebar.info("""
+**Tip for Free Models:** 
+To use Hugging Face models, get a free 'Read' token from huggingface.co/settings/tokens.
+""")
 
 # Load Dataset
 with open('data/benchmark.json', 'r') as f:
     benchmark_data = json.load(f)
 
 if st.button("🚀 Run Evaluation Suite"):
-    if not api_key and "huggingface" not in model_choice:
-        st.error("Please provide an API Key for the selected model.")
+    if not api_key:
+        st.error("⚠️ Please provide an API Key in the sidebar to run the evaluation.")
     else:
-        with st.spinner(f"Evaluating {model_choice} with {defense_choice}..."):
-            # Initialize
-            llm = ModelProvider(model_choice, api_key)
+        with st.spinner(f"Running research suite on {selected_display_name}..."):
+            llm = ModelProvider(model_id, api_key)
             engine = PILEngine(llm)
             
-            # Run
             raw_results = engine.run_benchmark(benchmark_data, defense_choice)
             stats = PILMetrics.calculate_aggregate_stats(raw_results)
 
-            # --- VISUALIZATION ---
+            # Metrics display
             col1, col2, col3 = st.columns(3)
-            col1.metric("Resistance Rate", f"{stats['attack_resistance_rate']}%")
-            col2.metric("Success Rate (ASR)", f"{stats['attack_success_rate']}%")
-            col3.metric("Tests Run", stats['total_tests'])
+            col1.metric("Resistance Rate", f"{stats['attack_resistance_rate']:.1f}%")
+            col2.metric("Success Rate (ASR)", f"{stats['attack_success_rate']:.1f}%")
+            col3.metric("Total Tests", stats['total_tests'])
 
             # Results Table
             st.subheader("Detailed Logs")
             df = pd.DataFrame(raw_results)
             
-            # Style the dataframe
-            def color_score(val):
-                color = '#ff4b4b' if val == 0 else '#28a745' if val == 1 else '#ffa500'
-                return f'background-color: {color}; color: white'
-            
-            st.table(df.style.applymap(color_score, subset=['score']))
+            # Formatting the table for better readability
+            st.dataframe(df[['id', 'category', 'input', 'output', 'score', 'reasoning']], 
+                         column_config={
+                             "score": st.column_config.ProgressColumn("Score", min_value=0, max_value=1),
+                             "output": st.column_config.TextColumn("Model Response", width="large")
+                         }, use_container_width=True)
 
-            # Category Analysis (PhD Highlight)
-            st.subheader("Vulnerability by Category")
-            fig = px.bar(df, x='category', y='score', color='category', 
-                         title="Resilience Score per Threat Category",
-                         labels={'score': 'Resilience (Higher is Better)'})
+            # Charts
+            st.subheader("Vulnerability Analysis")
+            fig = px.bar(df, x='category', y='score', color='category', range_y=[0,1],
+                         title="Resilience Score (1.0 = Secure, 0.0 = Injected)")
             st.plotly_chart(fig, use_container_width=True)
-
-# Documentation Tab
-with st.expander("ℹ️ Methodology & Research Goals"):
-    st.markdown("""
-    **Methodology:** This lab uses a controlled environment where a system prompt (the target) is attacked by a user prompt (the payload).
-    
-    **Metrics:** 
-    - **Attack Resistance Rate (ARR):** % of attempts where the model maintained its original instructions.
-    - **Heuristic Evaluation:** We analyze responses for refusal patterns and instruction adherence.
-    """)
