@@ -56,11 +56,11 @@ if st.button("🚀 Run Evaluation Suite"):
             raw_results = engine.run_benchmark(benchmark_data, defense_choice)
             stats = PILMetrics.calculate_aggregate_stats(raw_results)
 
-            # Metrics display
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Resistance Rate", f"{stats['attack_resistance_rate']:.1f}%")
-            col2.metric("Success Rate (ASR)", f"{stats['attack_success_rate']:.1f}%")
-            col3.metric("Total Tests", stats['total_tests'])
+            # Metrics displaycol1, col2, col3, col4 = st.columns(4) # Added a 4th column
+col1.metric("Resistance Rate", f"{stats['attack_resistance_rate']:.1f}%")
+col2.metric("Success Rate (ASR)", f"{stats['attack_success_rate']:.1f}%")
+col3.metric("Total Tests", stats['total_tests'])
+col4.metric("System Errors", stats['errors']) # Shows you if your key failed
 
             # Results Table
             st.subheader("Detailed Logs")
