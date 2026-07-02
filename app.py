@@ -11,18 +11,11 @@ st.title("🛡️ Prompt Injection Lab (PIL)")
 
 # Sidebar
 st.sidebar.header("🔬 Model Configuration")
-
 model_dict = {
-    "Gemini 1.5 Flash (Free-ish)": "gemini/gemini-1.5-flash",
-    "Gemini 1.5 Pro": "gemini/gemini-1.5-pro",
+    "Gemini 1.5 Flash (Most Reliable)": "gemini/gemini-1.5-flash",
     "Llama 3.1 8B (Free HF)": "huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct",
-    "Llama 3.1 70B (HF)": "huggingface/meta-llama/Meta-Llama-3.1-70B-Instruct",
-    "Claude 3.5 Sonnet": "anthropic/claude-3-5-sonnet-20240620",
-    "GPT-4o Mini": "openai/gpt-4o-mini",
-    "DeepSeek V2.5": "deepseek/deepseek-chat",
-    "Qwen 2.5 72B": "huggingface/Qwen/Qwen2.5-72B-Instruct",
-    "Mistral Large 2": "mistral/mistral-large-latest",
-    "Phi-3.5 MoE": "huggingface/microsoft/Phi-3.5-MoE-instruct"
+    "Qwen 2.5 7B (Free HF)": "huggingface/Qwen/Qwen2.5-7B-Instruct",
+    "GPT-4o Mini": "openai/gpt-4o-mini"
 }
 
 selected_display_name = st.sidebar.selectbox("Target Model", list(model_dict.keys()))
@@ -53,9 +46,15 @@ if st.button("🚀 Run Evaluation Suite"):
         df = pd.DataFrame(raw_results)
         st.dataframe(df[['id', 'category', 'input', 'output', 'score', 'reasoning']], use_container_width=True)
 
-        # Charts
+        # Charts - FIXED: Only show if there are non-error results
         st.subheader("Vulnerability Analysis")
-        chart_df = df[df['score'] >= 0]
+        chart_df = df[df['score'] >= 0].copy()
         if not chart_df.empty:
-            fig = px.bar(chart_df, x='category', y='score', color='category', range_y=[0,1])
+            # Create a simple bar chart
+            fig = px.bar(chart_df, x='category', y='score', color='category', 
+                         title="Resilience Score by Category",
+                         labels={'score': 'Resilience (1=Safe, 0=Failed)'},
+                         range_y=[0, 1])
             st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.error("No valid data to display in chart. Check 'System Errors' above.")
