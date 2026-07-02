@@ -4,13 +4,21 @@ import os
 class ModelProvider:
     def __init__(self, model_name, api_key=None):
         self.model_name = model_name
-        self.api_key = api_key
+        # Clean the key to remove any accidental spaces or newlines
+        self.api_key = api_key.strip() if api_key else None
+        
+        if not self.api_key:
+            if "gemini" in model_name:
+                self.api_key = os.getenv("GEMINI_API_KEY", "").strip()
+            else:
+                self.api_key = os.getenv("HF_TOKEN", "").strip()
 
     def generate(self, system_prompt, user_input):
         try:
-            # Dropdown mapping for litellm
-            # If it's a HF model, litellm needs 'huggingface/' prefix
-            # If it's Gemini, it needs 'gemini/' prefix
+            # Gemini specific setup for litellm
+            if "gemini" in self.model_name:
+                os.environ["GEMINI_API_KEY"] = self.api_key
+                os.environ["GOOGLE_API_KEY"] = self.api_key
             
             response = litellm.completion(
                 model=self.model_name,
@@ -19,14 +27,9 @@ class ModelProvider:
                     {"role": "user", "content": user_input}
                 ],
                 api_key=self.api_key,
-                force_timeout=20 # Prevents the app from hanging
+                force_timeout=20
             )
             return response.choices[0].message.content
         except Exception as e:
-            # Check for common error types and return clean messages
-            err_msg = str(e).lower()
-            if "401" in err_msg or "unauthorized" in err_msg:
-                return "Error: Invalid API Key or Unauthorized. Please check your token."
-            if "429" in err_msg:
-                return "Error: Rate limit exceeded. Try again in a moment."
-            return f"Error: {str(e)[:100]}..." # Return first 100 chars of error
+            # Return a clean error message that the Metrics engine can recognize
+            return f"Error: {str(e)[:150]}"
