@@ -12,16 +12,19 @@ st.title("🛡️ Prompt Injection Lab (PIL)")
 # Sidebar
 st.sidebar.header("🔬 Model Configuration")
 model_dict = {
-    "Gemini 1.5 Flash (Most Reliable)": "gemini/gemini-1.5-flash",
-    "Llama 3.1 8B (Free HF)": "huggingface/meta-llama/Meta-Llama-3.1-8B-Instruct",
-    "Qwen 2.5 7B (Free HF)": "huggingface/Qwen/Qwen2.5-7B-Instruct",
-    "GPT-4o Mini": "openai/gpt-4o-mini"
+    "Qwen 2.5 7B (Free - Best for HF)": "huggingface/Qwen/Qwen2.5-7B-Instruct",
+    "Mistral 7B v0.3 (Free HF)": "huggingface/mistralai/Mistral-7B-Instruct-v0.3",
+    "Gemini 1.5 Flash (Free Google)": "gemini/gemini-1.5-flash",
+    "GPT-4o Mini": "openai/gpt-4o-mini",
+    "DEBUG: Mock Model (No API Key)": "mock/debug-model"
 }
 
 selected_display_name = st.sidebar.selectbox("Target Model", list(model_dict.keys()))
 model_id = model_dict[selected_display_name]
-api_key = st.sidebar.text_input("API Provider Key (Optional if Secret is set)", type="password")
+api_key = st.sidebar.text_input("API Provider Key (Optional)", type="password")
 defense_choice = st.sidebar.selectbox("Defense Strategy", ["No Defense", "XML Tagging", "Delimiter Guard"])
+
+st.sidebar.warning("Note: Llama models require manual approval on HF. Use Qwen or Mistral for instant free testing.")
 
 # Load Dataset
 with open('data/benchmark.json', 'r') as f:
@@ -46,15 +49,14 @@ if st.button("🚀 Run Evaluation Suite"):
         df = pd.DataFrame(raw_results)
         st.dataframe(df[['id', 'category', 'input', 'output', 'score', 'reasoning']], use_container_width=True)
 
-        # Charts - FIXED: Only show if there are non-error results
+        # Charts
         st.subheader("Vulnerability Analysis")
         chart_df = df[df['score'] >= 0].copy()
         if not chart_df.empty:
-            # Create a simple bar chart
             fig = px.bar(chart_df, x='category', y='score', color='category', 
                          title="Resilience Score by Category",
                          labels={'score': 'Resilience (1=Safe, 0=Failed)'},
                          range_y=[0, 1])
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.error("No valid data to display in chart. Check 'System Errors' above.")
+            st.error("No valid data. If using HF, ensure your token is a 'Classic Read' token.")
