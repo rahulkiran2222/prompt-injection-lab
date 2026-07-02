@@ -4,34 +4,29 @@ import os
 class ModelProvider:
     def __init__(self, model_name, api_key=None):
         self.model_name = model_name
-        ui_key = api_key.strip() if api_key else ""
         
-        # Priority: 1. UI Sidebar, 2. HF Secrets
-        if len(ui_key) > 5:
+        # 1. Look for key in UI sidebar
+        # 2. Look for key in HF Secrets
+        ui_key = api_key.strip() if (api_key and len(api_key) > 5) else None
+        
+        if ui_key:
             self.api_key = ui_key
+        elif "gemini" in model_name:
+            self.api_key = os.getenv("GEMINI_API_KEY")
         else:
-            # Automatic mapping of Secrets
-            if "gemini" in model_name:
-                self.api_key = os.getenv("GEMINI_API_KEY")
-            elif "claude" in model_name:
-                self.api_key = os.getenv("ANTHROPIC_API_KEY")
-            elif "gpt" in model_name:
-                self.api_key = os.getenv("OPENAI_API_KEY")
-            else:
-                self.api_key = os.getenv("HF_TOKEN")
+            self.api_key = os.getenv("HF_TOKEN")
 
     def generate(self, system_prompt, user_input):
         if not self.api_key:
-            return "Error: No API Key. Add it to Sidebar or Space Secrets."
+            return "Error: No API Key found. Please add HF_TOKEN or GEMINI_API_KEY to Space Secrets."
             
         try:
-            # Set environment variables for LiteLLM
+            # FORCE environment variables (This is what LiteLLM needs)
             if "gemini" in self.model_name:
                 os.environ["GEMINI_API_KEY"] = self.api_key
-            elif "anthropic" in self.model_name:
-                os.environ["ANTHROPIC_API_KEY"] = self.api_key
-            elif "openai" in self.model_name:
-                os.environ["OPENAI_API_KEY"] = self.api_key
+                os.environ["GOOGLE_API_KEY"] = self.api_key
+            else:
+                os.environ["HUGGINGFACE_API_KEY"] = self.api_key
 
             response = litellm.completion(
                 model=self.model_name,
@@ -39,9 +34,11 @@ class ModelProvider:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_input}
                 ],
+                # We pass it both ways to be 100% sure
                 api_key=self.api_key,
-                force_timeout=30
+                force_timeout=40 
             )
             return response.choices[0].message.content
         except Exception as e:
+            # If the free API is down, this will tell us
             return f"Error: {str(e)}"
