@@ -2,6 +2,7 @@ streamlit
 pandas
 plotly
 litellm
+huggingface_hub
 requests
 pydantic
 python-dotenv
