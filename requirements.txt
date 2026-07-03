@@ -2,5 +2,6 @@ streamlit
 pandas
 plotly
 litellm
+requests
 pydantic
 python-dotenv
