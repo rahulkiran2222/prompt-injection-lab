@@ -3,6 +3,7 @@ pandas
 plotly
 litellm
 huggingface_hub
+google-generativeai
 requests
 pydantic
 python-dotenv
