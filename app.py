@@ -8,7 +8,7 @@ from core.engine import PILEngine
 from core.metrics import PILMetrics
 
 st.set_page_config(page_title="PIL Research Lab", layout="wide")
-st.title("🛡️ PIL: Multi-Model Robustness Leaderboard")
+st.title("🛡️ Prompt Injection Lab: Multi-Model Robustness Leaderboard")
 
 # Sidebar - Full Research Model List
 st.sidebar.header("🔬 Experiment Configuration")
